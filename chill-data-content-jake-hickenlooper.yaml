@@ -54,3 +54,21 @@ value:
   content: buystuffpage-content.html
   description: Enable some advanced options for puzzles.
   title: Buy Stuff
+
+--- !ChillNode
+name: historypage
+route: /history/
+template: history.html
+value:
+  content: history-content.html
+  description: 'Detailed history of the online jigsaw puzzle site: Puzzle Massive'
+  order: '10'
+  slug: history
+  title: History
+
+--- !ChillNode
+name: history_fragment
+route: /history/<int:page_id>/
+template: history_fragment.html
+value:
+  page_id: route-pass-page-id.sql
