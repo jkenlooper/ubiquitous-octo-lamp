@@ -1,11 +1,21 @@
 import mocha from "mocha";
 import chai from "chai";
-//import xstate from "@xstate/fsm";
 
-//import puzzlePieceMachineDefinition from "./puzzle-piece-machine-definition.js";
 import puzzlePieceMachine from "./puzzle-piece-machine.mjs";
+import {
+  state,
+  action,
+  event,
+  MOVABLE,
+  IMMOVABLE,
+} from "./puzzle-piece-machine-definition.mjs";
 const machine = puzzlePieceMachine;
 
+/**
+ * @type {Object} defaultPieceContext
+ * @type {number} defaultPieceContext.id
+ * ...
+ */
 const defaultPieceContext = {
   id: 1,
   s: 1,
@@ -21,86 +31,111 @@ const defaultPieceContext = {
 };
 
 mocha.suite("Initial puzzle piece state when first loading", () => {
-  /*
-  let machine;
-  mocha.setup(() => {
-    machine = xstate.createMachine(puzzlePieceMachineDefinition);
-  });
-  */
   mocha.test("immovable if piece status (s) is 1", () => {
     const initialPieceState = {
-      value: "unknown",
-      context: Object.assign(defaultPieceContext, { s: 1 }),
+      value: state.unknown,
+      context: Object.assign({}, defaultPieceContext, { s: IMMOVABLE }),
     };
-    const event = {
-      type: "",
-      value: "",
-      //actions: [],
-      //matches: [],
-    };
-    let nextState = machine.transition(initialPieceState, event);
-    chai.assert("immovable" === nextState.value, "state is immovable");
-    chai.assert(1 === nextState.context.s);
+    let nextState = machine.transition(initialPieceState, "");
+    chai.assert.equal(nextState.value, state.immovable);
+    chai.assert.equal(nextState.context.s, IMMOVABLE);
     nextState = machine.transition(nextState, {
-      type: "MOUSEDOWN",
-      value: "",
+      type: event.MOUSEDOWN,
       payload: { x: 3, y: 3 },
     });
-    chai.assert("immovable" === nextState.value);
-    chai.assert(1 === nextState.context.s);
+    chai.assert.equal(nextState.value, state.immovable);
+    chai.assert.equal(nextState.context.s, IMMOVABLE);
     // Position remains the same as the initial piece state.
-    chai.assert(initialPieceState.context.x === nextState.context.x);
-    chai.assert(initialPieceState.context.y === nextState.context.y);
+    chai.assert.equal(nextState.context.x, initialPieceState.context.x);
+    chai.assert.equal(nextState.context.y, initialPieceState.context.y);
   });
 
   mocha.test("movable if piece status (s) is not 1", () => {
     const initialPieceState = {
-      value: "unknown",
-      context: Object.assign(defaultPieceContext, { s: 0 }),
+      value: state.unknown,
+      context: Object.assign({}, defaultPieceContext, { s: MOVABLE }),
     };
-    const event = {
-      type: "",
-      value: "",
-    };
-    let nextState = machine.transition(initialPieceState, event);
-    chai.assert.equal(nextState.value, "movable");
-    chai.assert.strictEqual(nextState.context.s, 0);
+    let nextState = machine.transition(initialPieceState, "");
+    chai.assert.equal(nextState.value, state.movable);
+    chai.assert.strictEqual(nextState.context.s, MOVABLE);
 
+    // Player clicks on piece
     nextState = machine.transition(nextState, {
-      type: "MOUSEDOWN",
-      value: "",
+      type: event.MOUSEDOWN,
       payload: {
-        x: initialPieceState.context.x,
-        y: initialPieceState.context.y,
+        x: initialPieceState.context.x + 10,
+        y: initialPieceState.context.y + 7,
       },
     });
-    chai.assert.equal(nextState.value, "pendingClaim");
+    chai.assert.equal(nextState.value, state.pendingClaim);
     chai.assert.deepEqual(nextState.actions, [
       {
-        type: "postPlayerAction",
+        type: action.postPlayerAction,
       },
       {
-        type: "getToken",
+        type: action.getToken,
+      },
+    ]);
+    nextState = machine.transition(nextState, {
+      type: event.MOUSEUP,
+      payload: { x: 5, y: 2 },
+    });
+    chai.assert.equal(nextState.value, state.pendingClaim);
+    /*
+    chai.assert.deepEqual(nextState.actions, [
+      {
+        type: action.postPlayerAction,
+      },
+      {
+        type: action.getToken,
+      },
+    ]);
+    */
+
+    // Player gets token
+    nextState = machine.transition(nextState, {
+      type: event.TOKEN_SUCCESS,
+      payload: { token: "asdf" },
+    });
+    chai.assert.equal(nextState.value, state.claimed);
+    chai.assert.deepEqual(nextState.actions, [
+      {
+        type: action.startClaimTimeout,
+      },
+    ]);
+    nextState = machine.transition(nextState, event.NULL);
+    chai.assert.equal(nextState.value, state.active);
+
+    nextState = machine.transition(nextState, {
+      type: event.MOUSEDOWN,
+      payload: { x: 35, y: 32 },
+    });
+    chai.assert.equal(nextState.value, state.pending);
+
+    nextState = machine.transition(nextState, {
+      type: event.MOUSEUP,
+      payload: { x: 35, y: 32 },
+    });
+    chai.assert.equal(nextState.value, state.pending);
+
+    nextState = machine.transition(nextState, {
+      type: event.UPDATE,
+      payload: { x: 30, y: 30, s: 0, g: 3 },
+    });
+
+    chai.assert.equal(nextState.value, state.movable);
+    chai.assert.equal(nextState.context.s, MOVABLE);
+    chai.assert.deepEqual(nextState.actions, [
+      {
+        type: action.updatePieceGroupMove,
+      },
+      {
+        type: action.updatePiece,
       },
     ]);
 
-    nextState = machine.transition(nextState, {
-      type: "MOUSEUP",
-      value: "",
-      payload: { x: 3, y: 3 },
-    });
-
-    nextState = machine.transition(nextState, {
-      type: "UPDATE",
-      value: "",
-      payload: { x: 30, y: 30 },
-    });
-
-    // TODO: send events MOUSEUP, UPDATE
-    chai.assert.equal(nextState.value, "movable");
-    chai.assert(0 === nextState.context.s);
     // Position is updated
-    chai.assert(30 === nextState.context.x, "position is updated");
-    chai.assert(30 === nextState.context.y, "position is updated");
+    chai.assert.equal(nextState.context.x, 30, "position is updated");
+    chai.assert.equal(nextState.context.y, 30, "position is updated");
   });
 });
