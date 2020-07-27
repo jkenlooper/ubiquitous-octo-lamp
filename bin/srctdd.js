@@ -32,12 +32,12 @@ wp.on("aggregated", () => {
     );
   } catch (error) {
     // Continue watching if the unit test failed.
-    if (error instanceof Error) {
-      if (error.status !== 1) {
-        throw error;
-      }
-    } else {
-      throw error;
-    }
+    //if (error instanceof Error) {
+    //  if (error.status === 1) {
+    //    throw error;
+    //  }
+    //} else {
+    //  throw error;
+    //}
   }
 });

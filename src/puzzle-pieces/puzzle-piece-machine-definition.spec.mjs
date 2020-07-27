@@ -4,67 +4,171 @@ import chai from "chai";
 import puzzlePieceMachine from "./puzzle-piece-machine.mjs";
 import {
   state,
+  defaultPieceContext,
   action,
   event,
   MOVABLE,
   IMMOVABLE,
 } from "./puzzle-piece-machine-definition.mjs";
+
 const machine = puzzlePieceMachine;
 
-/**
- * @type {Object} defaultPieceContext
- * @type {number} defaultPieceContext.id
- * ...
- */
-const defaultPieceContext = {
-  id: 1,
-  s: 1,
-  x: 1,
-  y: 1,
-  r: 1,
-  g: 1,
-  w: 20,
-  h: 20,
-  b: 1,
-  token: undefined,
-  groupActive: undefined,
-};
-
 mocha.suite("Initial puzzle piece state when first loading", () => {
-  mocha.test("immovable if piece status (s) is 1", () => {
-    const initialPieceState = {
-      value: state.unknown,
-      context: Object.assign({}, defaultPieceContext, { s: IMMOVABLE }),
-    };
-    let nextState = machine.transition(initialPieceState, "");
-    chai.assert.equal(nextState.value, state.immovable);
-    chai.assert.equal(nextState.context.s, IMMOVABLE);
-    nextState = machine.transition(nextState, {
-      type: event.MOUSEDOWN,
-      payload: { x: 3, y: 3 },
+  mocha.test("unknown until UPDATE event", () => {
+    chai.assert.equal(machine.initialState.value, state.unknown);
+    let nextState = machine.transition(machine.initialState.value, {
+      type: event.UPDATE,
+      payload: {
+        id: 1,
+        s: IMMOVABLE,
+        x: 1,
+        y: 1,
+        r: 1,
+        //g: 1,
+        w: 20,
+        h: 20,
+        b: 1,
+      },
     });
+    chai.assert.notEqual(nextState.value, state.unknown);
+    chai.assert.equal(nextState.context.id, 1);
+    chai.assert.equal(nextState.context.g, undefined);
+  });
+
+  mocha.test("immovable cond", () => {
+    chai.assert.equal(machine.initialState.value, state.unknown);
+    let nextState = machine.transition(machine.initialState.value, {
+      type: event.UPDATE,
+      payload: {
+        id: 1,
+        s: IMMOVABLE,
+        x: 1,
+        y: 1,
+        r: 1,
+        //g: 1,
+        w: 20,
+        h: 20,
+        b: 1,
+      },
+    });
+
     chai.assert.equal(nextState.value, state.immovable);
     chai.assert.equal(nextState.context.s, IMMOVABLE);
-    // Position remains the same as the initial piece state.
-    chai.assert.equal(nextState.context.x, initialPieceState.context.x);
-    chai.assert.equal(nextState.context.y, initialPieceState.context.y);
   });
 
   mocha.test("movable if piece status (s) is not 1", () => {
-    const initialPieceState = {
-      value: state.unknown,
-      context: Object.assign({}, defaultPieceContext, { s: MOVABLE }),
-    };
-    let nextState = machine.transition(initialPieceState, "");
+    let nextState = machine.transition(machine.initialState.value, {
+      type: event.UPDATE,
+      payload: {
+        id: 1,
+        s: MOVABLE,
+        x: 1,
+        y: 1,
+        r: 1,
+        //g: 1,
+        w: 20,
+        h: 20,
+        b: 1,
+      },
+    });
     chai.assert.equal(nextState.value, state.movable);
     chai.assert.strictEqual(nextState.context.s, MOVABLE);
+  });
+});
 
+mocha.suite("Observe piece updates when piece is movable", () => {
+  mocha.test("New x,y for non-grouped piece", () => {
+    const pieceState = {
+      value: state.movable,
+      context: Object.assign({}, defaultPieceContext, {
+        id: 1,
+        s: MOVABLE,
+        x: 23,
+        y: 56,
+        r: 1,
+        //g: 1,
+        w: 20,
+        h: 20,
+        b: 1,
+      }),
+    };
+    let nextState = machine.transition(pieceState, {
+      type: event.UPDATE,
+      payload: {
+        id: 1,
+        s: MOVABLE,
+        x: 111,
+        y: 222,
+      },
+    });
+    chai.assert.equal(nextState.value, state.movable);
+    chai.assert.strictEqual(nextState.context.s, MOVABLE);
+    chai.assert.strictEqual(nextState.context.x, 111);
+    chai.assert.strictEqual(nextState.context.y, 222);
+    chai.assert.deepEqual(nextState.actions, [
+      {
+        type: action.updatePiece,
+      },
+    ]);
+  });
+  mocha.test("Set immovable for non-grouped piece", () => {
+    const pieceState = {
+      value: state.movable,
+      context: Object.assign({}, defaultPieceContext, {
+        id: 1,
+        s: MOVABLE,
+        x: 23,
+        y: 56,
+        r: 1,
+        //g: 1,
+        w: 20,
+        h: 20,
+        b: 1,
+      }),
+    };
+    let nextState = machine.transition(pieceState, {
+      type: event.UPDATE,
+      payload: {
+        id: 1,
+        s: IMMOVABLE,
+        x: 111,
+        y: 222,
+      },
+    });
+    chai.assert.equal(nextState.value, state.immovable);
+    chai.assert.strictEqual(nextState.context.s, IMMOVABLE);
+    chai.assert.strictEqual(nextState.context.x, 111);
+    chai.assert.strictEqual(nextState.context.y, 222);
+    chai.assert.deepEqual(nextState.actions, [
+      {
+        type: action.updatePiece,
+      },
+    ]);
+  });
+});
+
+mocha.suite("WIP player events", () => {
+  mocha.test("WIP ..movable if piece status (s) is not 1", () => {
+    let nextState = machine.transition(machine.initialState.value, {
+      type: event.UPDATE,
+      payload: {
+        id: 1,
+        s: MOVABLE,
+        x: 1,
+        y: 1,
+        r: 1,
+        //g: 1,
+        w: 20,
+        h: 20,
+        b: 1,
+      },
+    });
     // Player clicks on piece
     nextState = machine.transition(nextState, {
       type: event.MOUSEDOWN,
       payload: {
-        x: initialPieceState.context.x + 10,
-        y: initialPieceState.context.y + 7,
+        x: nextState.context.x + 10,
+        y: nextState.context.y + 7,
       },
     });
     chai.assert.equal(nextState.value, state.pendingClaim);
@@ -126,9 +230,11 @@ mocha.suite("Initial puzzle piece state when first loading", () => {
     chai.assert.equal(nextState.value, state.movable);
     chai.assert.equal(nextState.context.s, MOVABLE);
     chai.assert.deepEqual(nextState.actions, [
+      /*
       {
         type: action.updatePieceGroupMove,
       },
+      */
       {
         type: action.updatePiece,
       },
