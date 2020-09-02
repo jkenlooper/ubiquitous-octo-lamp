@@ -77,9 +77,9 @@ Use `ssh` to login into the development machine either as root (`ssh root@local-
 ssh local-puzzle-massive;
 ```
 
-Create the `dev` user for Puzzle Massive. This user will own the sqlite database
-among other things. There are other commands that set up ssh and adds your
-public key to your virtual machine. See the bin/init.sh for that if you are
+Create the `dev` user for the development machine. This user will own the sqlite
+database among other things. There are other commands that set up ssh and adds
+your public key to your virtual machine. See the bin/init.sh for that if you are
 using a separate machine (virtual machine) as your development machine.
 
 While logged into the development machine.
@@ -91,7 +91,7 @@ sudo adduser dev;
 sudo usermod -aG sudo dev;
 ```
 
-Create the initial source directory that files will by `rsync`ed to on the
+Create the initial source directory that files will be `rsync`ed to on the
 development machine.
 
 ```bash
@@ -222,6 +222,7 @@ On the local machine install dependencies for prettier and black. These tools
 are needed to autoformat the changed code before committing. The `virtualenv`
 can be installed on your local machine with a package manager
 (`sudo apt-get install virtualenv`).
+Or skip using virtualenv and create one with `python3 -m venv .` .
 
 ```bash
 # Setup to use a virtual python environment
@@ -231,7 +232,7 @@ source bin/activate;
 # Install black to format python code when developing
 pip install black;
 
-# Build the dist files for local development
+# Install build dependencies with npm
 nvm use;
 npm install;
 

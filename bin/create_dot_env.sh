@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e -u -o pipefail
 
 function usage {
   cat <<USAGE
@@ -8,7 +8,7 @@ Usage: ${0} [-h]
 Options:
   -h            Show help
 
-Creates the .env and .htpasswd files used for Puzzle Massive development.
+Creates the .env file used for setting some configuration for the website.
 Existing files will be renamed with a .bak suffix.
 USAGE
   exit 0;
