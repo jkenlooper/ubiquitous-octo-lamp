@@ -1,0 +1,87 @@
+%% State machine diagram in mermaid js format (mmd)
+%% http://mermaid-js.github.io/mermaid/
+%%
+%% Line breaks are not fully supported. Use div elements as a workaround. Notes
+%% can't be multiple lines either (note left of state ... end note)
+%%
+%% Create puzzle-piece.state-diagram.svg with this command:
+%% `npm run mmdc -- --input puzzle-piece.state-diagram.mmd --output puzzle-piece.state-diagram.svg`
+%% Add `-p puppeteer.config.json` for sandbox workaround if needed.
+
+%% ACTION_START = mousedown, touchstart
+%% ACTION_MOVE = mousemove, touchmove
+%% ACTION_END = mouseup, touchend
+
+stateDiagram-v2
+  _context : <div>context</div> <div><b>mutable</b> x, y, r, s, g</div><div><b>immutable</b> id, w, h, b</div><div><b>props</b> token, groupActive, claimQueue, actionQueue</div><p></p>
+
+  [*] --> unknown
+
+  unknown --> immovable : <div>cond / isImmovable</div>
+  unknown --> movable : <div>cond / isMovable</div>
+
+  note left of immovable : entry / clearActionQueue
+  immovable --> movable : UPDATE <div>cond / isMovable</div>
+  %% Puzzle status is set back to active when it was frozen
+
+  note left of movable : entry / popActionQueue
+  movable --> immovable : UPDATE <div>cond / isImmovable</div>
+  %% Puzzle status is set to frozen could trigger this
+  movable --> pendingClaim : ACTION_START
+  movable --> claimed : UPDATE
+
+  note left of pendingClaim :  entry / addToActionQueue
+  pendingClaim --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  pendingClaim --> queued : TOKEN_SUCCESS <div>cond / claimQueueNotEmpty</div>
+  %% Current player requested claim but server has other players in queue.
+  pendingClaim --> selected : TOKEN_SUCCESS <div>cond / claimQueueEmpty</div>
+  pendingClaim --> pendingClaim : ACTION_ROTATE
+  pendingClaim --> pendingClaim : ACTION_MOVE
+  pendingClaim --> pendingClaim : ACTION_END
+  %% Current player has requested to be next to claim piece.
+
+  claimed --> transitionStart : UPDATE
+  claimed --> pendingClaim : ACTION_START
+  %% Another player currently has a claim on this piece.  More players may be in
+  %% the queue to claim it next.
+
+  queued --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  queued --> selected : UPDATE <div>cond / isMovable and playerIsNextInQueue</div>
+  %% Current player is in queue to claim piece.
+
+  note left of selected : entry / popActionQueue
+  selected --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  selected --> rotate : ACTION_ROTATE
+  selected --> translate : ACTION_MOVE
+  selected --> pendingClaim : CLAIM_TIMEOUT
+  %% Multiple pieces can be selected at a time. Each will get a valid token on
+  %% entry and will continue to refresh the claim every timeout interval.
+
+  note left of rotate : entry / popActionQueue
+  rotate --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  rotate --> pendingTransform : ACTION_END
+  note left of translate : entry / popActionQueue
+  translate --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  translate --> pendingTransform : ACTION_END
+  %% Current player is actively transforming piece that was selected.
+
+  pendingTransform --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  pendingTransform --> transitionStart : UPDATE
+  %% Current player has submitted the request to transform (move) piece.
+
+  transitionStart --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  transitionStart --> transitionInProgress
+  transitionInProgress --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  transitionInProgress --> transitionEnd
+  transitionEnd --> interrupt : UPDATE <div>cond / isInterrupt</div>
+  transitionEnd --> immovable : <div>cond / isImmovable</div>
+  transitionEnd --> claimed : <div>cond / isMovable and claimQueueNotEmpty</div>
+  transitionEnd --> movable : <div>cond / isMovable</div>
+  transitionEnd --> selected : <div>cond / isMovable and isSelected</div>
+  %% Piece is being updated from response.
+
+  note right of interrupt : entry / clearActionQueue
+  interrupt --> immovable : <div>cond / isImmovable</div>
+  interrupt --> claimed : <div>cond / isMovable and claimQueueNotEmpty</div>
+  interrupt --> movable : <div>cond / isMovable</div>
+
